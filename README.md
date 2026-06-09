@@ -1,0 +1,1 @@
+# Cloudflare Pages + Vue Template\n\n将 functions/api/[[path]].js 中的 API 域名改成你的域名。\n
