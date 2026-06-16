@@ -1,4 +1,4 @@
-const TARGET_HOST = 'https://www.roushuge.vip'
+const TARGET_HOST = 'https://kppq7764skqo.madou.christmas'
 
 export async function onRequest(context) {
   const req = context.request
