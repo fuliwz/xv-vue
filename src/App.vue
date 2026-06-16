@@ -16,70 +16,37 @@
 import { ref, onMounted } from 'vue'
 
 const progress = ref(0)
-const status = ref('正在连接服务器...')
+const status = ref('连接服务器...')
 
 onMounted(async () => {
   let timer = setInterval(() => {
-    if (progress.value < 90) {
-      progress.value++
-    }
-  }, 60)
+    if (progress.value < 90) progress.value++
+  }, 50)
 
   try {
-    status.value = '正在加载页面...'
+    const path = window.location.pathname + window.location.search
 
-    // =========================
-    // 1️⃣ 核心：只走 GET /api + 当前路径
-    // =========================
-    const target =
-      '/api' +
-      window.location.pathname +
-      window.location.search
+    const res = await fetch('/api' + path)
 
-    const res = await fetch(target, {
-      method: 'GET',
-      headers: {
-        'Accept': 'text/html'
-      }
-    })
-
-    if (!res.ok) {
-      throw new Error('HTTP ' + res.status)
-    }
-
-    // =========================
-    // 2️⃣ 获取 HTML（不再 JSON）
-    // =========================
     const html = await res.text()
 
     progress.value = 100
-    status.value = '正在渲染页面...'
+    status.value = '渲染中...'
 
     clearInterval(timer)
 
-    // =========================
-    // 3️⃣ 稳定渲染（镜像核心）
-    // =========================
     setTimeout(() => {
-      // 清空 Vue 容器，避免冲突
-      document.body.innerHTML = ''
-
-      // 写入完整 HTML
       document.open()
       document.write(html)
       document.close()
-    }, 200)
+    }, 150)
 
-  } catch (err) {
+  } catch (e) {
     clearInterval(timer)
-    console.error(err)
-
     status.value = '加载失败'
-    progress.value = 100
   }
 })
 </script>
-
 <style>
 html,
 body {
