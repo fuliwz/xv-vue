@@ -1,7 +1,6 @@
 <template>
   <div class="loading-container">
     <div class="logo">Loading...</div>
-
     <div class="status">{{ status }}</div>
 
     <div class="progress-box">
@@ -16,107 +15,39 @@
 import { ref, onMounted } from 'vue'
 
 const progress = ref(0)
-const status = ref('正在连接服务器...')
+const status = ref('连接服务器...')
 
 onMounted(async () => {
   let timer = setInterval(() => {
-    if (progress.value < 90) {
-      progress.value++
-    }
-  }, 80)
+    if (progress.value < 90) progress.value++
+  }, 60)
 
   try {
+    status.value = '加载页面中...'
+
     const path = window.location.pathname + window.location.search
 
-    status.value = '正在加载页面...'
-
-    // ✅ 直接 GET HTML（关键改动）
-
-    const res = await fetch('/api' + window.location.pathname + window.location.search, {
-      method: 'GET',
-      headers: {
-        'Accept': 'text/html'
-      }
+    const res = await fetch('/api' + path, {
+      method: 'GET'
     })
-
-    if (!res.ok) {
-      throw new Error('HTTP ' + res.status)
-    }
 
     const html = await res.text()
 
     progress.value = 100
-    status.value = '正在渲染页面...'
+    status.value = '渲染中...'
 
     clearInterval(timer)
 
     setTimeout(() => {
-      // ✅ 保留 CSS / JS 运行能力
+      // ⚠️ v2核心：直接替换 DOM（稳定）
       document.open()
       document.write(html)
       document.close()
-    }, 300)
+    }, 200)
 
-  } catch (err) {
+  } catch (e) {
     clearInterval(timer)
-    console.error(err)
     status.value = '加载失败'
   }
 })
 </script>
-
-<style>
-html,
-body {
-  margin: 0;
-  padding: 0;
-}
-
-.loading-container {
-  position: fixed;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  background: #fff;
-  font-family: Arial, Helvetica, sans-serif;
-}
-
-.logo {
-  font-size: 28px;
-  font-weight: bold;
-  margin-bottom: 30px;
-}
-
-.status {
-  font-size: 16px;
-  color: #666;
-  margin-bottom: 20px;
-}
-
-.progress-box {
-  width: 320px;
-  height: 10px;
-  background: #e5e5e5;
-  border-radius: 20px;
-  overflow: hidden;
-}
-
-.progress-bar {
-  height: 100%;
-  width: 0;
-  background: #2196f3;
-  transition: width 0.3s ease;
-}
-
-.percent {
-  margin-top: 15px;
-  font-size: 24px;
-  font-weight: bold;
-  color: #2196f3;
-}
-</style>
