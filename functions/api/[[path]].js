@@ -16,44 +16,49 @@ export async function onRequest(context) {
       }
     })
 
+    // =========================
+    // 1️⃣ 解决乱码：必须用 arrayBuffer
+    // =========================
     const buffer = await resp.arrayBuffer()
     let html = new TextDecoder('utf-8').decode(buffer)
 
     const host = url.origin
 
     // =========================
-    // 1️⃣ 域名替换（核心）
-    // =========================
-    html = html.replaceAll(TARGET_HOST, host)
-
-    // =========================
-    // 2️⃣ 删除 base 标签（防资源错位）
+    // 2️⃣ 去掉 base 标签（致命点）
     // =========================
     html = html.replace(/<base[^>]*>/g, '')
 
     // =========================
-    // 3️⃣ 修复绝对路径资源
+    // 3️⃣ 统一域名替换
     // =========================
-    html = html
-      .replace(/src="\//g, `src="${host}/`)
-      .replace(/href="\//g, `href="${host}/`)
+    html = html.replaceAll(TARGET_HOST, host)
 
     // =========================
-    // 4️⃣ 防止乱码头
+    // 4️⃣ 修复 CSS / JS（关键升级）
+    // =========================
+    html = html
+      // /xxx 资源
+      .replace(/(href|src)="\/(?!\/)/g, `$1="${host}/`)
+
+      // //cdn.xxx.com（协议相对路径）
+      .replace(/(href|src)="\/\//g, `$1="https://`)
+
+    // =========================
+    // 5️⃣ 防止 CF/浏览器缓存干扰
     // =========================
     return new Response(html, {
       status: resp.status,
       headers: {
         'content-type': 'text/html; charset=utf-8',
-        'cache-control': 'no-cache',
-        'x-mirror': 'v2-single-source'
+        'cache-control': 'no-store',
+        'x-mirror': 'v3-fixed'
       }
     })
 
-  } catch (err) {
-    return new Response(
-      `proxy error: ${err.message}`,
-      { status: 500 }
-    )
+  } catch (e) {
+    return new Response('proxy error: ' + e.message, {
+      status: 500
+    })
   }
 }
