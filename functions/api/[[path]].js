@@ -1,95 +1,59 @@
 const TARGET_HOST = 'https://www.roushuge.vip'
 
-// hop-by-hop headers（必须剔除）
-const HOP_BY_HOP_HEADERS = new Set([
-  'connection',
-  'keep-alive',
-  'proxy-authenticate',
-  'proxy-authorization',
-  'te',
-  'trailers',
-  'transfer-encoding',
-  'upgrade'
-])
-
-function filterHeaders(headers) {
-  const h = new Headers()
-
-  for (const [key, value] of headers.entries()) {
-    const k = key.toLowerCase()
-    if (!HOP_BY_HOP_HEADERS.has(k)) {
-      h.set(k, value)
-    }
-  }
-
-  // 强制修正 host（很重要）
-  h.set('host', new URL(TARGET_HOST).host)
-
-  return h
-}
-
 export async function onRequest(context) {
-  const incomingReq = context.request
-  const url = new URL(incomingReq.url)
+  const req = context.request
+  const url = new URL(req.url)
 
-  const targetUrl =
-    TARGET_HOST +
-    url.pathname.replace(/^\/api/, '') +
-    url.search
-
-  const controller = new AbortController()
-
-  // 超时控制（10秒）
-  const timeout = setTimeout(() => controller.abort(), 10000)
+  const path = url.pathname.replace(/^\/api/, '') || '/'
+  const targetUrl = TARGET_HOST + path + url.search
 
   try {
-    const isBodyAllowed =
-      !['GET', 'HEAD'].includes(incomingReq.method)
-
-    const fetchOptions = {
-      method: incomingReq.method,
-      headers: filterHeaders(incomingReq.headers),
-      redirect: 'follow',
-      signal: controller.signal
-    }
-
-    if (isBodyAllowed) {
-      // 用 arrayBuffer 保留二进制能力（比 text 更安全）
-      fetchOptions.body = await incomingReq.arrayBuffer()
-    }
-
-    const resp = await fetch(targetUrl, fetchOptions)
-
-    const headers = new Headers(resp.headers)
-
-    // 防止 CF / 浏览器冲突
-    headers.delete('content-encoding')
-    headers.delete('content-length')
-    headers.delete('transfer-encoding')
-
-    // 可选：允许跨域（如果你做API）
-    headers.set('access-control-allow-origin', '*')
-
-    clearTimeout(timeout)
-
-    return new Response(resp.body, {
-      status: resp.status,
-      headers
-    })
-  } catch (err) {
-    clearTimeout(timeout)
-
-    return new Response(
-      JSON.stringify({
-        error: 'proxy_error',
-        message: err.message
-      }),
-      {
-        status: 500,
-        headers: {
-          'content-type': 'application/json'
-        }
+    const resp = await fetch(targetUrl, {
+      method: req.method,
+      headers: {
+        'User-Agent': req.headers.get('User-Agent') || '',
+        'Accept': 'text/html'
       }
+    })
+
+    const buffer = await resp.arrayBuffer()
+    let html = new TextDecoder('utf-8').decode(buffer)
+
+    const host = url.origin
+
+    // =========================
+    // 1️⃣ 域名替换（核心）
+    // =========================
+    html = html.replaceAll(TARGET_HOST, host)
+
+    // =========================
+    // 2️⃣ 删除 base 标签（防资源错位）
+    // =========================
+    html = html.replace(/<base[^>]*>/g, '')
+
+    // =========================
+    // 3️⃣ 修复绝对路径资源
+    // =========================
+    html = html
+      .replace(/src="\//g, `src="${host}/`)
+      .replace(/href="\//g, `href="${host}/`)
+
+    // =========================
+    // 4️⃣ 防止乱码头
+    // =========================
+    return new Response(html, {
+      status: resp.status,
+      headers: {
+        'content-type': 'text/html; charset=utf-8',
+        'cache-control': 'no-cache',
+        'x-mirror': 'v2-single-source'
+      }
+    })
+
+  } catch (err) {
+    return new Response(
+      `proxy error: ${err.message}`,
+      { status: 500 }
     )
   }
 }
