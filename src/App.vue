@@ -31,7 +31,8 @@ onMounted(async () => {
     status.value = '正在加载页面...'
 
     // ✅ 直接 GET HTML（关键改动）
-    const res = await fetch(path, {
+
+    const res = await fetch('/api' + window.location.pathname + window.location.search, {
       method: 'GET',
       headers: {
         'Accept': 'text/html'
