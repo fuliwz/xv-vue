@@ -1,7 +1,7 @@
 export async function onRequest(context) {
   const url = new URL(context.request.url)
 
-  const targetHost = 'https://www.pornbest.org'
+  const targetHost = 'https://www.roushuge.vip'
 
   const targetUrl =
     targetHost +
