@@ -1,4 +1,4 @@
-const TARGET_HOST = 'https://51mahua.com'
+const TARGET_HOST = 'https://xn--msrsy8hefv.m02.mp23.top'
 
 export async function onRequest(context) {
   const req = context.request
