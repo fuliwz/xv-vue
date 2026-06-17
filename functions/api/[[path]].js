@@ -1,4 +1,4 @@
-const TARGET_HOST = 'https://jokerlu3.com'
+const TARGET_HOST = 'https://51mahua.com'
 
 export async function onRequest(context) {
   const req = context.request
