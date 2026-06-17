@@ -1,4 +1,4 @@
-const TARGET_HOST = 'https://cn.pornhub.com'
+const TARGET_HOST = 'https://jokerlu3.com'
 
 export async function onRequest(context) {
   const req = context.request
